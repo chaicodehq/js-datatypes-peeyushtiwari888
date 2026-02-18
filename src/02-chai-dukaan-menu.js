@@ -29,4 +29,39 @@
  */
 export function formatChaiMenu(items) {
   // Your code here
+  if(!Array.isArray(items)||items.length==0){
+    return "";
+  }
+
+  let result =[];
+
+  for(let i=0;i<items,length;i++){
+    let item = items[i];
+
+    if(typeof item.name!=="string"){
+      continue;
+
+    }
+    if(item.name.length===0){
+      continue;
+
+    }
+
+    if(typeof item.price!=="number"){
+      continue;
+    }
+
+    if(item.price<=0){
+      continue;
+    }
+
+    let nameUpper = item.name.toUpperCase();
+
+    let formattedItem = nameUpper+ " -Rs."+item.price;
+
+    result.push(formattedItem);
+  }
+
+  return result.join(" | ");
+
 }
