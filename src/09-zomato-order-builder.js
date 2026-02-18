@@ -49,49 +49,56 @@ export function buildZomatoOrder(cart, coupon) {
   // Your code here
   if (!Array.isArray(cart) || cart.length === 0) return null;
 
-  const validItems = cart.filter(item => item && item.qty > 0);
-  if (validItems.length === 0) return null;
+  const items = cart
+    .filter(i => i && i.qty > 0)
+    .map(i => {
+      const addonPerUnit = (i.addons || []).reduce((sum, addon) => {
+        const p = parseFloat(addon.split(":")[1]);
+        return sum + (Number.isFinite(p) ? p : 0);
+      }, 0);
 
-  const items = validItems.map(item => {
-    const addonTotalPerUnit = (item.addons || []).reduce((sum, addon) => {
-      const parts = addon.split(":");
-      const price = parseFloat(parts[1]) || 0;
-      return sum + price;
-    }, 0);
+      const itemTotal = (i.price + addonPerUnit) * i.qty;
 
-    const itemTotal = (item.price + addonTotalPerUnit) * item.qty;
+      return {
+        name: i.name,
+        qty: i.qty,
+        basePrice: i.price,
+        addonTotal: addonPerUnit,
+        itemTotal
+      };
+    });
 
-    return {
-      name: item.name,
-      qty: item.qty,
-      basePrice: item.price,
-      addonTotal: addonTotalPerUnit,
-      itemTotal: itemTotal
-    };
-  });
+  if (items.length === 0) return null;
 
-  const subtotal = items.reduce((sum, item) => sum + item.itemTotal, 0);
-
-  let deliveryFee = 30;
-  if (subtotal >= 1000) deliveryFee = 0;
-  else if (subtotal >= 500) deliveryFee = 15;
-
-  const gst = parseFloat((subtotal * 0.05).toFixed(2));
-
-  let discount = 0;
-  const promo = typeof coupon === "string" ? coupon.toUpperCase() : "";
-
-  if (promo === "FIRST50") {
-    discount = Math.min(subtotal * 0.5, 150);
-  } else if (promo === "FLAT100") {
-    discount = 100;
-  } else if (promo === "FREESHIP") {
-    discount = deliveryFee;
-  }
+  const subtotal = items.reduce((s, i) => s + i.itemTotal, 0);
 
   
-  const total = subtotal + deliveryFee + gst - discount;
-  const grandTotal = parseFloat(Math.max(0, total).toFixed(2));
+  let deliveryFee = 0;
+  if (subtotal < 500) deliveryFee = 30;
+  else if (subtotal < 1000) deliveryFee = 15;
+
+  
+  const gst = parseFloat((subtotal * 0.05).toFixed(2));
+
+  
+  let discount = 0;
+  const code = typeof coupon === "string" ? coupon.trim().toUpperCase() : "";
+
+  if (code === "FIRST50") {
+    discount = Math.min(subtotal * 0.5, 150);
+  } 
+  else if (code === "FLAT100") {
+    discount = Math.min(100, subtotal);
+  } 
+  else if (code === "FREESHIP") {
+    discount = deliveryFee; 
+    deliveryFee = 0;        
+  }
+
+
+  const grandTotal = parseFloat(
+    Math.max(0, subtotal + deliveryFee + gst - discount).toFixed(2)
+  );
 
   return {
     items,
